@@ -1,0 +1,10 @@
+---
+- name: Restart node exporter
+  hosts: web
+  become: yes
+
+  tasks:
+    - name: Restart node_exporter
+      systemd:
+        name: node_exporter
+        state: restarted

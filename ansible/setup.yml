@@ -1,0 +1,25 @@
+- name: Provision Web Server
+  hosts: web
+  become: yes
+
+  tasks:
+
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install nginx
+      apt:
+        name: nginx
+        state: present
+
+    - name: Start nginx
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+
+    - name: Create custom homepage
+      copy:
+        content: "<h1>Provisioned by Ansible 🚀</h1>"
+        dest: /var/www/html/index.html

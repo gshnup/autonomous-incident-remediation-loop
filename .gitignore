@@ -1,0 +1,13 @@
+# Vagrant virtual machine files (CRITICAL to ignore)
+.vagrant/
+Vagrantfile.bak
+
+# Python cache and bytecode
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ansible logs and retry files
+*.retry
+*.log
