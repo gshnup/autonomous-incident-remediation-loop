@@ -1,92 +1,316 @@
+<div align="center">
 
+# 🩺 Self-Healing Infrastructure Lab
 
-🔄 Autonomous Incident Remediation Loop Infrastructure
+### *Autonomous Incident Remediation Loop*
 
-An automated, production-grade self-healing infrastructure cluster simulated locally on Ubuntu 22.04 LTS instances using Vagrant, VirtualBox, and Ansible orchestration. The environment leverages Prometheus and Node Exporter for high-resolution observability telemetry, Prometheus Alertmanager for structured threshold validation, and a dedicated, background-managed Python Webhook listener that dynamically coordinates automated Ansible playbooks to self-heal system nodes instantly upon service failure detection.
-🏗️ System Architecture & Topography
+**A 3-node Linux lab that watches itself, catches its own failures, and fixes them — without a human ever touching a terminal.**
 
-The environment provisions a multi-tier local datacenter segment spanning a dedicated, isolated host-only subnet (192.168.56.0/24).
+![Vagrant](https://img.shields.io/badge/Vagrant-1868F2?style=flat-square&logo=vagrant&logoColor=white)
+![VirtualBox](https://img.shields.io/badge/VirtualBox-183A61?style=flat-square&logo=virtualbox&logoColor=white)
+![Ansible](https://img.shields.io/badge/Ansible-EE0000?style=flat-square&logo=ansible&logoColor=white)
+![Prometheus](https://img.shields.io/badge/Prometheus-E6522C?style=flat-square&logo=prometheus&logoColor=white)
+![Grafana](https://img.shields.io/badge/Grafana-F46800?style=flat-square&logo=grafana&logoColor=white)
+![Alertmanager](https://img.shields.io/badge/Alertmanager-DA291C?style=flat-square)
+![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white)
+![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04-E95420?style=flat-square&logo=ubuntu&logoColor=white)
+![systemd](https://img.shields.io/badge/systemd-enabled-444444?style=flat-square)
 
-                 +----------------------------------------+
-                 |  Control Node (192.168.56.10)          |
-                 |  - Ansible Core Engine & Webhook Pull  |
-                 |  - Prometheus Engine & Alertmanager    |
-                 |  - Grafana Observability Dashboard     |
-                 +----------------------------------------+
-                                     |
-                    +----------------+----------------+
-                    | (Secure SSH / Outbound Metrics) |
-                    v                                 v
-  +-----------------------------------+     +-----------------------------------+
-  | Web Node (192.168.56.11)          |     | Data Node (192.168.56.12)         |
-  | - Nginx High-Performance Proxy    |     | - Telemetry Storage Simulator     |
-  | - Node Exporter Daemon (Pt. 9100) |     | - Node Exporter Daemon (Pt. 9100) |
-  +-----------------------------------+     +-----------------------------------+
+![Status](https://img.shields.io/badge/status-validated-success?style=flat-square)
+![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)
 
-End-to-End Remediation Pipeline
+</div>
 
-    Outage Event: A target production service daemon (e.g., nginx) encounters a critical error and enters a failed status on the Web Node.
+---
 
-    Metrics Scrape: The local node_exporter collection daemon registers the fault. Prometheus scrapes the collector telemetry on a hyper-aggressive 5s frequency and processes the state vector boundary calculation: up{job="web"} == 0.
+## 📋 Table of Contents
+- [Overview](#-overview)
+- [Architecture](#-architecture)
+- [Tech Stack](#-tech-stack)
+- [Repository Structure](#-repository-structure)
+- [Quick Start](#-quick-start)
+- [Build Phases](#-build-phases)
+- [Alert Rules](#-alert-rules)
+- [Screenshots](#-screenshots)
+- [Project Status](#-project-status)
+- [What This Demonstrates](#-what-this-demonstrates)
+- [Future Improvements](#-future-improvements)
+- [Author](#-author)
+- [License](#-license)
 
-    Alert Evaluation: Upon breach of verification constraints for a continuous 30s window, Prometheus shifts the event into a firing status registry and dispatches an asynchronous event notification schema to Alertmanager.
+---
 
-    Webhook Dispatch: Alertmanager translates the rule threshold violation into an active HTTP POST JSON payload directed to a custom background python listener daemon running on the Control Node.
+## 📖 Overview
 
-    Automated Remediating Tasks: The Python execution listener parses the node metadata variables out of the payload array and dynamically shells out a background thread running targeted Ansible orchestration roles.
+This project builds a small-scale replica of real production infrastructure — entirely on a single laptop. Three Ubuntu VMs talk to each other over a private network. One node watches the other two. When something breaks, the system detects it and fixes it without a human in the loop.
 
-    Self-Healing Resolution: Ansible executes systemd lifecycle recovery operations over secure SSH keys, the runtime target daemon reaches a running status, metrics pipelines stabilize, and Prometheus system alerts automatically shift back to a cleared status.
+> **In plain English:** picture a web server crashing at 3 AM. Normally someone gets paged, wakes up, SSHes in, and restarts it by hand. This lab is the system that catches the crash and restarts it itself — nobody wakes up.
 
-🛠️ Project Provisioning Lifecycle
-Phase 1: Virtualized Infrastructure Definition as Code (IaC)
+---
 
-Multi-node initialization profiles are fully declarations-driven via a declarative Vagrantfile, abstracting local hypervisor parameters, private network adapters, core resources assignment, and automated identity file handshakes.
+## 🏗️ Architecture
 
-Command to verify running virtual machines:
+Three Ubuntu 22.04 VMs run in VirtualBox on a private network (`192.168.56.0/24`):
+
+| Node | IP | Role | Services |
+|---|---|---|---|
+| `control` | `192.168.56.10` | Brain — monitors + remediates | Ansible, Prometheus, Grafana, Alertmanager, Webhook |
+| `web` | `192.168.56.11` | Target — serves traffic | Nginx, Node Exporter |
+| `data` | `192.168.56.12` | Target — backend tier | Node Exporter |
+
+```mermaid
+flowchart TB
+    subgraph NET["Private Network · 192.168.56.0/24"]
+        CTRL["🖥️ control — .10<br/>Ansible · Prometheus<br/>Grafana · Alertmanager · Webhook"]
+        WEB["🌐 web — .11<br/>Nginx · Node Exporter"]
+        DATA["🗄️ data — .12<br/>Node Exporter"]
+    end
+    CTRL -->|SSH + scrape| WEB
+    CTRL -->|SSH + scrape| DATA
+```
+
+### The Full Pipeline
+
+```mermaid
+flowchart LR
+    A["🌐 App<br/>web / data server"] --> B["📊 Node Exporter<br/>:9100"]
+    B --> C["🔥 Prometheus<br/>scrapes every 5s"]
+    C -->|rule breached| D["🚨 Alertmanager<br/>routes the alert"]
+    D -->|POST webhook| E["🐍 Python listener<br/>triggers the fix"]
+    E --> F["⚙️ Ansible playbook<br/>SSH + restart service"]
+    F --> G["✅ Recovered<br/>alert clears itself"]
+```
+
+---
+
+## 🧰 Tech Stack
+
+| Layer | Tool | Role |
+|---|---|---|
+| IaC / Provisioning | **Vagrant + VirtualBox** | Spins up 3× Ubuntu 22.04 VMs from one declarative `Vagrantfile` |
+| Config Management | **Ansible** | SSHes into nodes, installs services, runs the remediation playbook |
+| Metrics | **Prometheus + Node Exporter** | Scrapes CPU / memory / disk / network every 5s on `:9100` |
+| Visualization | **Grafana** | Live dashboards on top of Prometheus data, `:3000` |
+| Alerting | **Alertmanager** | Evaluates fired rules, routes them to the webhook receiver, `:9093` (default) |
+| Remediation | **Python webhook + Ansible** | Receives the alert POST, runs the playbook that fixes the node |
+| Process Supervision | **systemd** | Keeps the webhook listener alive as `webhook.service` |
+| Host OS | **Ubuntu 22.04** | OS for all 3 VMs |
+
+---
+
+## 📂 Repository Structure
+
+Clean separation between infrastructure, automation, and monitoring config:
+
+```
+self-healing-infrastructure-lab/
+├── Vagrantfile
+├── ansible/
+│   ├── inventory.ini
+│   └── playbook.yml
+├── prometheus/
+│   ├── prometheus.yml
+│   └── alert.rules.yml
+├── alertmanager/
+│   └── alertmanager.yml
+├── webhook/
+│   ├── webhook_listener.py
+│   └── webhook.service
+├── screenshots/
+│   ├── vagrant_status.png
+│   ├── ansible_ping.png
+│   ├── nginx_welcome.png
+│   ├── prometheus_targets.png
+│   ├── grafana_dashboard.png
+│   ├── prometheus_alert.png
+│   └── recovery_logs.png
+├── LICENSE
+└── README.md
+```
+
+---
+
+## ⚙️ Quick Start
+
+### Prerequisites
+- [VirtualBox](https://www.virtualbox.org/) 7.x
+- [Vagrant](https://www.vagrantup.com/) 2.4+
+- ~8 GB free RAM (3 VMs running concurrently)
+- Ansible 2.1x (on host, or bootstrapped onto `control`)
+
+### Spin it up
+
+```bash
+# 1. Clone the repo and move in
+git clone <your-repo-url> self-healing-infrastructure-lab
+cd self-healing-infrastructure-lab
+
+# 2. Bring up all 3 VMs defined in the Vagrantfile
+vagrant up
+
+# 3. Confirm all 3 nodes are running
 vagrant status
-Phase 2: Configuration & Software Orchestration via Ansible
 
-Ansible applies automated playbooks to configure instances in a consistent manner, without requiring thick native target agents. Initial connectivity routes and runtime parameters are assessed via ad-hoc execution engines.
+# 4. Confirm Ansible can reach web + data over SSH
+ansible all -i ansible/inventory.ini -m ping
 
-Command to check multi-node connectivity:
-ansible all -i inventory.ini -m ping
+# 5. Provision Nginx + Node Exporter on the managed nodes
+ansible-playbook -i ansible/inventory.ini ansible/playbook.yml
 
-Following the orchestration of provisioning task sheets, targeted environment web portals are validated directly via host network connections:
-Phase 3: Observability Stack Engineering & Visual Analytics
+# 6. Start the observability + remediation stack on control
+ssh vagrant@192.168.56.10
+sudo systemctl start prometheus grafana-server alertmanager webhook
 
-Comprehensive platform performance reporting maps metrics ingestion parameters directly across targeted node configurations.
+# 7. Verify the stack is alive
+#    Prometheus targets → http://192.168.56.10:9090/targets
+#    Grafana dashboard  → http://192.168.56.10:3000
 
-    Prometheus Status Management Panel (http://192.168.56.10:9090/targets):
-    Tracks scraping metrics ingestion lines across nodes to confirm healthy reporting layers.
-
-    Grafana Real-time Analytics Visualizer (http://192.168.56.10:3000):
-    Renders live resource index curves, CPU load profiles, storage metrics, and disk access intervals.
-
-Phase 4: Validating the Self-Healing Closed-Loop Automation
-
-To validate the reliability parameters of the autonomous recovery cycle, a production-level outage scenario is simulated directly inside the active web instance:
-Executing an unannounced service runtime termination fault
-
+# 8. Break something on purpose
+ssh vagrant@192.168.56.11
 sudo systemctl stop nginx
+# Prometheus fires WebServerDown after 30s → Alertmanager → webhook → Ansible restarts nginx
 
-Prometheus traps the metric drops, parses rule boundaries, and flags the WebServerDown notification rule element directly into an operational firing state:
-
-The decoupled Python webhook engine processes the incoming event data array, reads the failure parameters, and safely applies recovery code vectors directly over the affected node cluster configuration:
-
-Command to inspect automated webhook execution logs:
+# 9. Watch it heal itself
 sudo journalctl -u webhook.service -n 20 --no-pager
-📋 Technology Blueprint Matrix
+```
 
-    Virtualization Layer: Vagrant 2.X Core Engine / VirtualBox Provider Integration
+---
 
-    Base Virtual System: Ubuntu Server 22.04 LTS (Jammy Jellyfish minimal build context)
+## 🛠️ Build Phases
 
-    Configuration Deployment & Management: Ansible Orchestration Core
+### Phase 1 — Infrastructure as Code
+Three VMs defined in a single `Vagrantfile` instead of manually clicking through VirtualBox. One command creates all three.
 
-    Metrics Storage Infrastructure: Prometheus Monitoring Engine / Node Exporter Collector
+```ruby
+Vagrant.configure("2") do |config|
+  config.vm.define "control" do |m|
+    m.vm.network "private_network", ip: "192.168.56.10"
+  end
+  config.vm.define "web" do |m|
+    m.vm.network "private_network", ip: "192.168.56.11"
+  end
+  config.vm.define "data" do |m|
+    m.vm.network "private_network", ip: "192.168.56.12"
+  end
+end
+```
 
-    Alert Routing & Handling Matrix: Prometheus Alertmanager Middleware
+### Phase 2 — Provisioning with Ansible
+Ansible lives on `control` and SSH-keys into `web` + `data` — no manual logins, no typed passwords.
 
-    Remediation Loop Framework: Event-Driven Python Webhook Listener / systemd system units
+```ini
+[web]
+192.168.56.11
 
-    Visual Presentation Interface: Grafana Labs Visual Reporting Dashboards
+[data]
+192.168.56.12
+```
+
+Nginx gets pushed to `web` via the playbook and verified live at `http://192.168.56.11`.
+
+### Phase 3 — Monitoring Setup
+Node Exporter exposes OS-level metrics (CPU, memory, disk, network) on every target. Prometheus scrapes them every 5 seconds. Grafana turns that into dashboards.
+
+```yaml
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: 'web'
+    static_configs:
+      - targets: ['192.168.56.11:9100']
+  - job_name: 'data'
+    static_configs:
+      - targets: ['192.168.56.12:9100']
+```
+
+### Phase 4 — Self-Healing Automation & Alerting
+The core of the project. Alertmanager intercepts a firing alert and POSTs it to a Python webhook listener, which runs an Ansible playbook to fix the node — no human in the loop.
+
+```yaml
+groups:
+  - name: nginx-alerts
+    rules:
+    - alert: WebServerDown
+      expr: up{job="web"} == 0
+      for: 30s
+      labels:
+        severity: critical
+      annotations:
+        summary: "Web Server Down"
+```
+
+> **Validated under failure:** killing Nginx on `web` triggers the full loop — alert fires, webhook receives it, Ansible restarts the service, and the alert clears automatically within seconds. Zero manual terminal interaction.
+
+---
+
+## 🚨 Alert Rules
+
+| Alert | Trigger Condition | Production Meaning |
+|---|---|---|
+| `HighCPUUsage` | CPU idle % drops below threshold | Node is CPU-throttled or overloaded |
+| `WebServerDown` | `up{job="web"} == 0` for `30s` | Target service/daemon has crashed or stopped responding |
+
+---
+
+## 📸 Screenshots
+
+> Drop your captured PNGs into a `screenshots/` folder using the filenames below and the gallery renders automatically on GitHub.
+
+| | |
+|---|---|
+| **1 · VM Provisioning**<br>`vagrant status` — all 3 nodes running<br>![Vagrant Status](./screenshots/vagrant_status.png) | **2 · Ansible Connectivity**<br>`ansible -m ping` — passwordless SSH confirmed<br>![Ansible Ping](./screenshots/ansible_ping.png) |
+| **3 · Nginx Live**<br>Deployed via playbook, served at `.11`<br>![Nginx Welcome](./screenshots/nginx_welcome.png) | **4 · Prometheus Targets**<br>Both nodes reporting `UP`<br>![Prometheus Targets](./screenshots/prometheus_targets.png) |
+| **5 · Grafana Dashboard**<br>Live CPU / mem / disk telemetry<br>![Grafana Dashboard](./screenshots/grafana_dashboard.png) | **6 · Alert Firing**<br>`WebServerDown` triggered on forced outage<br>![Prometheus Alert](./screenshots/prometheus_alert.png) |
+| **7 · Auto-Recovery Logs**<br>Webhook → Ansible fix, captured live in `journalctl`<br>![Recovery Logs](./screenshots/recovery_logs.png) | |
+
+---
+
+## ✅ Project Status
+
+- [x] Multi-VM infrastructure created with `Vagrantfile`
+- [x] Private network configured between all 3 nodes
+- [x] SSH key trust established (`control → web`, `control → data`)
+- [x] Ansible inventory + playbook written and idempotent
+- [x] Nginx deployed and verified live on the web node
+- [x] Prometheus + Node Exporter scrape targets configured and healthy
+- [x] Grafana dashboards rendering live metrics
+- [x] Alertmanager → webhook → Ansible auto-remediation validated end-to-end
+
+*Last validated: June 2026 — loop confirmed healing a forced outage with zero manual intervention.*
+
+---
+
+## 🎯 What This Demonstrates
+
+- **Infrastructure as Code** — the entire environment is reproducible from one `vagrant up`, zero manual VirtualBox clicking
+- **Configuration management** — idempotent Ansible playbooks over key-based SSH, no plaintext passwords anywhere
+- **Observability** — a real metrics pipeline: Node Exporter → Prometheus → Grafana
+- **Alerting** — threshold-based rules with severity labels and routing, not just a log line
+- **Closed-loop automation** — the alert *triggers a fix*, it doesn't just notify a human
+- **Service reliability** — the webhook listener runs as a supervised `systemd` unit, not a foreground script
+- **Tested under real failure** — recovery was proven by forcing actual outages, not just reading the code
+
+---
+
+## 🔭 Future Improvements
+
+- [ ] Push alert + recovery events to Slack/Discord for real-time visibility
+- [ ] Extend remediation beyond service restarts — disk pressure, memory leaks, cert expiry
+- [ ] Add `ansible-lint` + `promtool check rules` to a CI pipeline
+- [ ] Provision Grafana dashboards as code instead of manual setup
+- [ ] Add a max-retry / circuit breaker guard to stop restart loops on unrecoverable failures
+- [ ] Port the lab from local VirtualBox VMs to AWS via Terraform for cloud-realistic testing
+- [ ] Containerize the webhook listener
+
+
+
+## 📄 License
+
+Licensed under the [MIT License](LICENSE).
+
+<div align="center">
+
+*Break it on purpose. Watch it fix itself. That's the whole point.*
+
+</div>
