@@ -253,9 +253,8 @@ groups:
 
 ---
 
-## 📸 Screenshots
 
-> Drop your captured PNGs into a `screenshots/` folder using the filenames below and the gallery renders automatically on GitHub.
+## 📸 Screenshots
 
 | | |
 |---|---|
@@ -311,6 +310,6 @@ Licensed under the [MIT License](LICENSE).
 
 <div align="center">
 
-*Break it on purpose. Watch it fix itself. That's the whole point.*
+
 
 </div>
