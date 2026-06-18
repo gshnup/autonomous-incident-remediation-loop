@@ -1,10 +1,10 @@
 ---
-- name: Restart node exporter
+- name: "Remediation: Restore Nginx Web Server"
   hosts: web
   become: yes
 
   tasks:
-    - name: Restart node_exporter
-      systemd:
-        name: node_exporter
-        state: restarted
+    - name: "Ensure Nginx service is started and running"
+      ansible.builtin.systemd:
+        name: nginx
+        state: started
