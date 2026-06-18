@@ -259,10 +259,10 @@ groups:
 
 | | |
 |---|---|
-| **1 · VM Provisioning**<br>`vagrant status` — all 3 nodes running<br>![Vagrant Status](./screenshots/vagrant_status.png) | **2 · Ansible Connectivity**<br>`ansible -m ping` — passwordless SSH confirmed<br>![Ansible Ping](./screenshots/ansible_ping.png) |
-| **3 · Nginx Live**<br>Deployed via playbook, served at `.11`<br>![Nginx Welcome](./screenshots/nginx_welcome.png) | **4 · Prometheus Targets**<br>Both nodes reporting `UP`<br>![Prometheus Targets](./screenshots/prometheus_targets.png) |
-| **5 · Grafana Dashboard**<br>Live CPU / mem / disk telemetry<br>![Grafana Dashboard](./screenshots/grafana_dashboard.png) | **6 · Alert Firing**<br>`WebServerDown` triggered on forced outage<br>![Prometheus Alert](./screenshots/prometheus_alert.png) |
-| **7 · Auto-Recovery Logs**<br>Webhook → Ansible fix, captured live in `journalctl`<br>![Recovery Logs](./screenshots/recovery_logs.png) | |
+| **1 · VM Provisioning**<br>`vagrant status` — all 3 nodes running<br>![Vagrant Status](./assets/vagrant_status.png) | **2 · Ansible Connectivity**<br>`ansible -m ping` — passwordless SSH confirmed<br>![Ansible Ping](./assets/ansible_ping.png) |
+| **3 · Nginx Live**<br>Deployed via playbook, served at `.11`<br>![Nginx Welcome](./assets/nginx_welcome.png) | **4 · Prometheus Targets**<br>Both nodes reporting `UP`<br>![Prometheus Targets](./assets/prometheus_targets.png) |
+| **5 · Grafana Dashboard**<br>Live CPU / mem / disk telemetry<br>![Grafana Dashboard](./assets/grafana_dashboard.png) | **6 · Alert Firing**<br>`WebServerDown` triggered on forced outage<br>![Prometheus Alert](./assets/prometheus_alert.png) |
+| **7 · Auto-Recovery Logs**<br>Webhook → Ansible fix, captured live in `journalctl`<br>![Recovery Logs](./assets/recovery_logs.png) | |
 
 ---
 
