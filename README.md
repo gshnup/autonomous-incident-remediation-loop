@@ -256,14 +256,54 @@ groups:
 
 ## 📸 Screenshots
 
-| | |
-|---|---|
-| **1 · VM Provisioning**<br>`vagrant status` — all 3 nodes running<br>![Vagrant Status](./assets/vagrant_status.png) | **2 · Ansible Connectivity**<br>`ansible -m ping` — passwordless SSH confirmed<br>![Ansible Ping](./assets/ansible_ping.png) |
-| **3 · Nginx Live**<br>Deployed via playbook, served at `.11`<br>![Nginx Welcome](./assets/nginx_welcome.png) | **4 · Prometheus Targets**<br>Both nodes reporting `UP`<br>![Prometheus Targets](./assets/prometheus_targets.png) |
-| **5 · Grafana Dashboard**<br>Live CPU / mem / disk telemetry<br>![Grafana Dashboard](./assets/grafana_dashboard.png) | **6 · Alert Firing**<br>`WebServerDown` triggered on forced outage<br>![Prometheus Alert](./assets/prometheus_alert.png) |
-| **7 · Auto-Recovery Logs**<br>Webhook → Ansible fix, captured live in `journalctl`<br>![Recovery Logs](./assets/recovery_logs.png) | |
+<table width="100%">
+  <tr>
+    <td width="50%" valign="top">
+      <strong>1 · VM Provisioning</strong><br>
+      <code>vagrant status</code> — all 3 nodes running<br>
+      <img src="./assets/vagrant_status.png" width="100%">
+    </td>
+    <td width="50%" valign="top">
+      <strong>2 · Ansible Connectivity</strong><br>
+      <code>ansible -m ping</code> — passwordless SSH confirmed<br>
+      <img src="./assets/ansible_ping.png" width="100%">
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <strong>3 · Nginx Live</strong><br>
+      Deployed via playbook, served at .11<br>
+      <img src="./assets/nginx_welcome.png" width="100%">
+    </td>
+    <td width="50%" valign="top">
+      <strong>4 · Prometheus Targets</strong><br>
+      Both nodes reporting UP<br>
+      <img src="./assets/prometheus_targets.png" width="100%">
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <strong>5 · Grafana Dashboard</strong><br>
+      Live CPU / mem / disk telemetry<br>
+      <img src="./assets/grafana_dashboard.png" width="100%">
+    </td>
+    <td width="50%" valign="top">
+      <strong>6 · Alert Firing</strong><br>
+      <code>WebServerDown</code> triggered on forced outage<br>
+      <img src="./assets/prometheus_alert.png" width="100%">
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <strong>7 · Auto-Recovery Logs</strong><br>
+      Webhook → Ansible fix, captured live in journalctl<br>
+      <img src="./assets/recovery_logs.png" width="100%">
+    </td>
+    <td width="50%"></td>
+  </tr>
+</table>
 
----
+
 
 ## ✅ Project Status
 
