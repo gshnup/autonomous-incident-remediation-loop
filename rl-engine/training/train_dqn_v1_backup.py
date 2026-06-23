@@ -16,7 +16,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from aiops_env import AIOpsEnv
+from multi_cloud_env import MultiCloudEnv
 
 # --------------------------------------------------------------------------- #
 # Hyperparameters
@@ -34,7 +34,7 @@ EPSILON_DECAY = 0.995
 TARGET_UPDATE_EVERY_EPISODES = 10  # periodic hard update for stable targets
 LOG_EVERY_EPISODES = 10
 
-WEIGHTS_SAVE_PATH = "../models/aiops_dqn.pth"
+WEIGHTS_SAVE_PATH = "multi_cloud_dqn.pth"
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -165,7 +165,7 @@ class DQNAgent:
 # Training Loop
 # --------------------------------------------------------------------------- #
 def train() -> None:
-    env = AIOpsEnv()
+    env = MultiCloudEnv()
 
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.n
