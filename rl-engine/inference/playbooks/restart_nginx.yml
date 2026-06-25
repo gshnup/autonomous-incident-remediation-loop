@@ -1,0 +1,10 @@
+---
+- name: "Remediation: Restore Nginx Web Server"
+  hosts: web
+  become: yes
+
+  tasks:
+    - name: "Ensure Nginx service is started and running"
+      ansible.builtin.systemd:
+        name: nginx
+        state: started
